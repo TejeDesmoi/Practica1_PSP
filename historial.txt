@@ -1,0 +1,15 @@
+hola;1;33
+hola;1;33
+salida;1;33
+salida;1;33
+echo hola;0;33
+type fichero_inventado.txt;1;36
+ordeninventada;1;33
+ordeninventada;1;33
+ping -n 11 127.0.0.1;-1;5029
+ping -n 11 127.0.0.1;-1;5029
+ping -n 11 127.0.0.1;-1;5029
+ping -n 11 127.0.0.1;-1;5029
+ping -n 11 127.0.0.1;-1;5029
+ping -n 11 127.0.0.1;-1;5029
+ping -n 11 127.0.0.1;-1;5029
