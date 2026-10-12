@@ -33,7 +33,10 @@ const val CLASE_HIJO = "es.dam.psp.ut1.practicas.ContadorKt"   // main de Contad
  * Pista: Jvm.proceso(...) y redirectInput(...). Hereda la salida de error del hijo.
  */
 fun lanzarContador(fichero: File): Process {
-    TODO("Práctica 4.a")   // TODO 4.a
+    return Jvm.proceso(CLASE_HIJO)
+        .redirectInput(fichero)
+        .redirectError(ProcessBuilder.Redirect.INHERIT)
+        .start()
 }
 
 /**
@@ -41,17 +44,66 @@ fun lanzarContador(fichero: File): Process {
  * Si el código de salida no es 0, lanza una IllegalStateException con un mensaje claro.
  */
 fun recogerResultado(fichero: File, hijo: Process): Resultado {
-    TODO("Práctica 4.b")   // TODO 4.b
+    val linea = hijo.inputStream.bufferedReader().use{it.readLine()}
+
+    val codigo = hijo.waitFor()
+
+    if (codigo != 0) {
+        throw IllegalStateException(
+            "El contador de  ${fichero.name} termino con codigo $codigo"
+        )
+    }
+
+    if (linea == null){
+        throw IllegalStateException(
+            "El contador de ${fichero.name} no ha devuelto ningún resultado"
+        )
+    }
+
+    val campos = linea.split(";")
+    if (campos.size != 4){
+        throw IllegalStateException(
+            "Formato de resultado incorrecto para ${fichero.name}: $linea"
+        )
+    }
+
+    val lineas = campos[0].toLongOrNull()
+        ?: throw IllegalStateException("Número de líneas incorrecto: ${campos[0]}")
+
+    val palabras = campos[1].toLongOrNull()
+        ?: throw IllegalStateException("Número de palabras incorrecto: ${campos[1]}")
+
+    val caracteres = campos[2].toLongOrNull()
+        ?: throw IllegalStateException("Número de caracteres incorrecto: ${campos[2]}")
+
+    val masFrecuente = campos[3]
+
+    return Resultado(
+        fichero.name,
+        lineas,
+        palabras,
+        caracteres,
+        masFrecuente
+    )
 }
 
 /** Procesa los ficheros uno detrás de otro: lanzar, esperar, lanzar, esperar... */
 fun secuencial(ficheros: List<File>): List<Resultado> {
-    TODO("Práctica 4.c")   // TODO 4.c
+    return ficheros.map { fichero ->
+        val hijo = lanzarContador(fichero)
+        recogerResultado(fichero, hijo)
+    }
 }
 
 /** Lanza TODOS los hijos a la vez y después recoge los resultados. */
 fun concurrente(ficheros: List<File>): List<Resultado> {
-    TODO("Práctica 4.d")   // TODO 4.d
+    val procesos = ficheros.map { fichero ->
+        fichero to lanzarContador(fichero)
+    }
+
+    return procesos.map { (fichero,hijo) ->
+        recogerResultado(fichero, hijo)
+    }
 }
 
 fun main() {
@@ -68,10 +120,61 @@ fun main() {
     val t1 = measureTime { r1 = secuencial(ficheros) }
     val t2 = measureTime { r2 = concurrente(ficheros) }
 
-    // TODO 4.e: muestra una tabla con el resultado de cada fichero y una fila TOTAL
-    //  (líneas, palabras y caracteres sumados). Comprueba que r1 y r2 coinciden.
+    println()
+    println("RESULTADOS DEL ANÁLISIS")
+    println(
+        "%-24s %10s %10s %12s %s".format(
+            "FICHERO", "LÍNEAS", "PALABRAS", "CARACTERES", "MÁS FRECUENTE"
+        )
+    )
 
+    for (resultado in r1) {
+        println(
+            "%-24s %10d %10d %12d %s".format(
+                resultado.fichero,
+                resultado.lineas,
+                resultado.palabras,
+                resultado.caracteres,
+                resultado.masFrecuente
+            )
+        )
+    }
+
+    // Sumamos las cantidades numéricas de todos los ficheros
+    val totalLineas = r1.sumOf { it.lineas }
+    val totalPalabras = r1.sumOf { it.palabras }
+    val totalCaracteres = r1.sumOf { it.caracteres }
+
+    println(
+        "%-24s %10d %10d %12d %s".format(
+            "TOTAL",
+            totalLineas,
+            totalPalabras,
+            totalCaracteres,
+            "-"
+        )
+    )
+
+    // Comprobamos que los dos métodos han dado los mismos resultados
+    println()
+
+    if (r1 == r2) {
+        println("Comprobación correcta: los resultados secuenciales y concurrentes coinciden.")
+    } else {
+        println("ERROR: los resultados secuenciales y concurrentes no coinciden.")
+    }
+
+    // Mostramos los tiempos de ejecución
+    println()
     println("Secuencial:  $t1")
     println("Concurrente: $t2")
-    // Práctica 4.f: ejecútalo tres veces y calcula la aceleración t1 / t2
+
+    // Calculamos la aceleración
+    val tiempoSecuencial = t1.inWholeNanoseconds.toDouble()
+    val tiempoConcurrente = t2.inWholeNanoseconds.toDouble()
+
+    if (tiempoConcurrente > 0.0) {
+        val aceleracion = tiempoSecuencial / tiempoConcurrente
+        println("Aceleración: %.2fx".format(aceleracion))
+    }
 }
